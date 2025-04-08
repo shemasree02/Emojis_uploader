@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Emoji Expression Game</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #333; }
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    @media (min-width: 768px) {
+      #container { flex-direction: row; }
+    }
+    #emoji-display, #camera {
+      padding: 10px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 400px;
+    }
+    #emoji { font-size: 5rem; }
+    #video {
+      width: 100%;
+      border-radius: 10px;
+      transform: scaleX(-1);
+    }
+    #preview {
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      display: none;
+    }
+    #snap, #submit, #refresh-emoji {
+      margin: 10px 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+    #snap:hover, #submit:hover, #refresh-emoji:hover {
+      background-color: #0056b3;
+    }
+    #canvas { display: none; }
+    #name, #fileUpload {
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 90%;
+      max-width: 300px;
+    }
+    #message {
+      margin-top: 15px;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Emoji Expression Game</h1>
+  <input type="text" id="name" placeholder="Enter your name" required>
+
+  <div id="container">
+    <div id="emoji-display">
+      <h2>Match this emoji:</h2>
+      <h2 id="emoji">😃</h2>
+      <button id="refresh-emoji">🔄 New Emoji</button>
+    </div>
+
+    <div id="camera">
+      <video id="video" autoplay playsinline></video><br>
+      <button id="snap">📸 Capture</button>
+      <input type="file" id="fileUpload" accept="image/*">
+      <img id="preview" />
+      <br>
+      <button id="submit">📤 Submit</button>
+    </div>
+  </div>
+
+  <p id="message"></p>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const emojiList = ['😀','😃','😄','😁','😆','😅','😂','🤣','😭','😉','😗','😙','😚','😘','🥰','😍','🤩','🥳','🫠','🙃','🙂','🥲','🥹','😊','☺','😌','🙂‍↕','🙂‍↔','😏','🤤','😋','😛','😝','😜','🤪','🥴','😔','🥺','😬','😑','😐','😶','😶‍🌫','🫥','🤐','😱','🫣','🤗','🥱','🤭','🫢','🤫','🤔','🫡','🤨','🧐','😒','🙄','😮‍💨','😤','😠','😡','🤬','😞','😓','😟','😥','😢','☹','🙁','🫤','😕','🤯','😳','😲','😯','😮','😦','😧','😨','😰','😖','😣','😩','😵','🫨','🥶','🥵','🤥','😷','🤕','🤒','🤧','😪','😴','🤮','🤢','😇','🤠','🤑','🤓','😎','🥸','😈','👿'];
+    const emojiElement = document.getElementById('emoji');
+    const refreshButton = document.getElementById('refresh-emoji');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const snapBtn = document.getElementById('snap');
+    const submitBtn = document.getElementById('submit');
+    const nameInput = document.getElementById('name');
+    const messageEl = document.getElementById('message');
+    const previewImg = document.getElementById('preview');
+    const fileUpload = document.getElementById('fileUpload');
+
+    let capturedBlob = null; // Stores image blob from camera or file
+
+    function refreshEmoji() {
+      const randomEmoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+      emojiElement.textContent = randomEmoji;
+    }
+
+    refreshButton.addEventListener('click', refreshEmoji);
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        messageEl.style.color = 'red';
+        messageEl.textContent = "Camera not accessible: " + err;
+      });
+
+    snapBtn.addEventListener('click', () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Convert canvas to blob
+      canvas.toBlob(blob => {
+        capturedBlob = blob;
+        previewImg.src = URL.createObjectURL(blob);
+        previewImg.style.display = 'block';
+      }, 'image/jpeg');
+
+      messageEl.style.color = 'green';
+      messageEl.textContent = '📸 Photo captured and previewed!';
+    });
+
+    fileUpload.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        capturedBlob = file;
+        previewImg.src = URL.createObjectURL(file);
+        previewImg.style.display = 'block';
+        messageEl.style.color = 'green';
+        messageEl.textContent = '📁 File selected and previewed!';
+      }
+    });
+
+    submitBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        messageEl.style.color = 'red';
+        messageEl.textContent = '⚠️ Please enter your name before submitting.';
+        return;
+      }
+
+      if (!capturedBlob) {
+        messageEl.style.color = 'red';
+        messageEl.textContent = '⚠️ Please capture a photo or select a file before submitting.';
+        return;
+      }
+
+      const formData = new FormData();
+      const filename = `${name}_${Date.now()}.jpg`;
+      formData.append('file', capturedBlob, filename);
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        messageEl.style.color = 'green';
+        messageEl.textContent = '✅ ' + data.message;
+      })
+      .catch(err => {
+        messageEl.style.color = 'red';
+        messageEl.textContent = '❌ Error uploading photo. Please try again.';
+      });
+    });
+
+    window.addEventListener('load', refreshEmoji);
+  </script>
+</body>
+</html>
